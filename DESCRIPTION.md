@@ -27,7 +27,7 @@
 
   **Gameplay**
 
-  ![Start Screen](screenshots/gameplay/Startscreen.png)
+  ![Start Screen](screenshots/gameplay/StartScreen.png)
   ![Select Difficulty](screenshots/gameplay/SelectDifficulty.png)
   ![Game Screen](screenshots/gameplay/Gamescreen.png)
   ![Id and Folder data](screenshots/gameplay/Idandfolderdata.png)
@@ -72,6 +72,7 @@ The project extends this idea into a dormitory setting and adds a structured dat
 The class diagram is provided as a PDF in the repository root.
 
 **[UML_Class_Diagram](UML.pdf)**
+![UML Class Diagram](UML(pic).png)
 
 Class relationships summary:
 
