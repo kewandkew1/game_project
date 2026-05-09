@@ -81,12 +81,10 @@ class Doppelganger(Resident):
             student_id=resident.student_id,
             photo_id=resident.photo_id,
         )
-        if self.photo_id:
-            base = self.photo_id.replace(".png", "")
-            self.display_photo = f"{base}_dop.png"
         self.original_data = resident.to_dict()
         self.error_type = error_type or random.choice(self.ERROR_TYPES)
         self.disguise_level = 1
+        self.display_photo = self.photo_id  # reset; only photo_swap changes this
 
         self.generate_error()
 
@@ -102,8 +100,13 @@ class Doppelganger(Resident):
 
         elif self.error_type == "name_typo":
             name = list(self.name)
-            idx = random.randint(0, len(name) - 1)
-            name[idx] = random.choice("abcdefghijklmnopqrstuvwxyz")
+            letter_indices = [i for i, c in enumerate(name) if c.isalpha()]
+            if letter_indices:
+                idx = random.choice(letter_indices)
+                original = name[idx].lower()
+                choices = [c for c in "abcdefghijklmnopqrstuvwxyz" if c != original]
+                replacement = random.choice(choices)
+                name[idx] = replacement.upper() if name[idx].isupper() else replacement
             self.name = "".join(name)
 
         elif self.error_type == "wrong_id":

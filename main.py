@@ -20,7 +20,7 @@ GRAY = (180, 180, 180)
 
 def run():
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED | pygame.RESIZABLE)
     pygame.display.set_caption("Who is Your Neighbor?")
     clock = pygame.time.Clock()
 
@@ -152,9 +152,6 @@ def run():
                         starting_difficulty = ui.difficulty_screen(
                             bg, clock, FPS)
                         running = False
-                    else:
-                        pygame.quit()
-                        sys.exit()
                 else:
                     gm.next_round()
                     waiting = False

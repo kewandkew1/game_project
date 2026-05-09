@@ -282,21 +282,137 @@ class UIManager:
                             selected = i
                             return selected + 1
 
-    def game_over_screen(self, result, clock, fps=60):
-        while True:
-            self.screen.fill((10, 10, 20))
-            title = self.fonts["big"].render("GAME OVER", True, RED)
-            score = self.fonts["normal"].render(
-                f"Final Score:   {result['score']}", True, WHITE)
-            rounds = self.fonts["normal"].render(
-                f"Rounds Played: {result['rounds']}", True, WHITE)
-            hint = self.fonts["small"].render(
-                "Press R to Restart   Q to Quit", True, GRAY)
+    def stats_screen(self, clock, fps=60):
+        import io
+        import matplotlib.pyplot as plt
+        import generate_graphs as gg
 
-            self.screen.blit(title,  (self._center_x(title),  180))
-            self.screen.blit(score,  (self._center_x(score),  270))
-            self.screen.blit(rounds, (self._center_x(rounds), 310))
-            self.screen.blit(hint,   (self._center_x(hint),   400))
+        BG_C      = (30,  30,  46)
+        SIDEBAR_C = (42,  42,  62)
+        ACCENT_C  = (74,  144, 217)
+        TEXT_C    = (205, 214, 244)
+        MUTED_C   = (100, 110, 140)
+
+        SIDEBAR_W = 185
+        BTN_H     = 44
+        BTN_GAP   = 6
+
+        df, err = gg.load_data()
+
+        if err:
+            while True:
+                self.screen.fill(BG_C)
+                msg  = self.fonts["normal"].render("No stats yet — play a game first.", True, RED)
+                hint = self.fonts["tiny"].render("Press any key or click to go back", True, MUTED_C)
+                self.screen.blit(msg,  (WIDTH // 2 - msg.get_width()  // 2, HEIGHT // 2 - 20))
+                self.screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT // 2 + 14))
+                pygame.display.flip()
+                clock.tick(fps)
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        raise SystemExit
+                    if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                        return
+            return
+
+        graph_defs = [
+            ("Decision Time",     gg.graph_decision_time_histogram),
+            ("Error Types",       gg.graph_error_type_pie),
+            ("Accuracy & Time",   gg.graph_accuracy_and_time_per_round),
+            ("Score Progression", gg.graph_score_progression),
+            ("Summary",           None),
+        ]
+
+        cache    = {}
+        selected = 0
+        summary  = gg.build_summary_text(df)
+
+        def get_surf(idx):
+            if idx not in cache:
+                _, builder = graph_defs[idx]
+                fig = builder(df)
+                buf = io.BytesIO()
+                fig.savefig(buf, format="png", dpi=90, bbox_inches="tight")
+                plt.close(fig)
+                buf.seek(0)
+                cache[idx] = pygame.image.load(buf).convert()
+            return cache[idx]
+
+        start_y   = 54
+        btn_rects = [
+            pygame.Rect(8, start_y + i * (BTN_H + BTN_GAP), SIDEBAR_W - 16, BTN_H)
+            for i in range(len(graph_defs))
+        ]
+        save_rect = pygame.Rect(8, HEIGHT - 104, SIDEBAR_W - 16, 44)
+        back_rect = pygame.Rect(8, HEIGHT -  54, SIDEBAR_W - 16, 44)
+        graph_area = pygame.Rect(SIDEBAR_W + 4, 4, WIDTH - SIDEBAR_W - 8, HEIGHT - 8)
+
+        while True:
+            self.screen.fill(BG_C)
+            pygame.draw.rect(self.screen, SIDEBAR_C, (0, 0, SIDEBAR_W, HEIGHT))
+
+            title_s = self.fonts["small"].render("STATISTICS", True, ACCENT_C)
+            self.screen.blit(title_s, (SIDEBAR_W // 2 - title_s.get_width() // 2, 14))
+            pygame.draw.line(self.screen, (55, 55, 80), (8, 40), (SIDEBAR_W - 8, 40))
+
+            mx, my = pygame.mouse.get_pos()
+
+            for i, (label, _) in enumerate(graph_defs):
+                r   = btn_rects[i]
+                sel = (i == selected)
+                hov = r.collidepoint(mx, my)
+                if sel:
+                    pygame.draw.rect(self.screen, ACCENT_C, r, border_radius=5)
+                    fc = WHITE
+                elif hov:
+                    pygame.draw.rect(self.screen, (55, 95, 150), r, border_radius=5)
+                    fc = WHITE
+                else:
+                    fc = TEXT_C
+                ls = self.fonts["tiny"].render(label, True, fc)
+                self.screen.blit(ls, (r.centerx - ls.get_width() // 2,
+                                      r.centery - ls.get_height() // 2))
+
+            for rect, txt, base_c in [
+                (save_rect, "Save All", (40, 110, 40)),
+                (back_rect, "Back",     (110, 40, 40)),
+            ]:
+                c = tuple(min(v + 35, 255) for v in base_c) if rect.collidepoint(mx, my) else base_c
+                pygame.draw.rect(self.screen, c, rect, border_radius=5)
+                ls = self.fonts["tiny"].render(txt, True, WHITE)
+                self.screen.blit(ls, (rect.centerx - ls.get_width() // 2,
+                                      rect.centery - ls.get_height() // 2))
+
+            _, builder = graph_defs[selected]
+            if builder is None:
+                y = graph_area.y + 10
+                for line in summary.split("\n"):
+                    s = self.fonts["small"].render(line, True, TEXT_C)
+                    self.screen.blit(s, (graph_area.x + 10, y))
+                    y += 24
+            else:
+                if selected not in cache:
+                    ld = self.fonts["normal"].render("Rendering...", True, TEXT_C)
+                    self.screen.blit(ld, (graph_area.centerx - ld.get_width() // 2,
+                                          graph_area.centery - ld.get_height() // 2))
+                    pygame.display.flip()
+                    get_surf(selected)
+
+                surf = cache.get(selected)
+                if surf:
+                    sw, sh = surf.get_size()
+                    scale  = min(graph_area.width / sw, graph_area.height / sh)
+                    nw, nh = int(sw * scale), int(sh * scale)
+                    scaled = pygame.transform.smoothscale(surf, (nw, nh))
+                    gx = graph_area.x + (graph_area.width  - nw) // 2
+                    gy = graph_area.y + (graph_area.height - nh) // 2
+                    self.screen.blit(scaled, (gx, gy))
+
+            hint_s = self.fonts["tiny"].render(
+                "<- -> to switch   |   ESC / Back to return   |   S to save all", True, MUTED_C)
+            self.screen.blit(hint_s, (SIDEBAR_W + 10, HEIGHT - 16))
+
             pygame.display.flip()
             clock.tick(fps)
 
@@ -305,8 +421,90 @@ class UIManager:
                     pygame.quit()
                     raise SystemExit
                 if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_b):
+                        return
+                    if event.key == pygame.K_LEFT:
+                        selected = (selected - 1) % len(graph_defs)
+                    if event.key == pygame.K_RIGHT:
+                        selected = (selected + 1) % len(graph_defs)
+                    if event.key == pygame.K_s:
+                        gg.save_all(df)
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    for i, r in enumerate(btn_rects):
+                        if r.collidepoint(event.pos):
+                            selected = i
+                    if back_rect.collidepoint(event.pos):
+                        return
+                    if save_rect.collidepoint(event.pos):
+                        gg.save_all(df)
+
+    def game_over_screen(self, result, clock, fps=60):
+        btn_w, btn_h = 180, 50
+        btn_gap = 20
+        btn_y = 380
+
+        btn_defs = [
+            ("Restart",    GREEN,              "restart"),
+            ("View Stats", (74, 144, 217),     "stats"),
+            ("Quit",       RED,                "quit"),
+        ]
+        total_w = len(btn_defs) * btn_w + (len(btn_defs) - 1) * btn_gap
+        start_x = WIDTH // 2 - total_w // 2
+        buttons = [
+            {"label": lbl, "color": col, "action": act,
+             "rect": pygame.Rect(start_x + i * (btn_w + btn_gap), btn_y, btn_w, btn_h)}
+            for i, (lbl, col, act) in enumerate(btn_defs)
+        ]
+
+        while True:
+            self.screen.fill((10, 10, 20))
+
+            mx, my = pygame.mouse.get_pos()
+
+            title  = self.fonts["big"].render("GAME OVER", True, RED)
+            score  = self.fonts["normal"].render(f"Final Score:   {result['score']}", True, WHITE)
+            rounds = self.fonts["normal"].render(f"Rounds Played: {result['rounds']}", True, WHITE)
+            hint   = self.fonts["tiny"].render("R / S / Q to use keyboard", True, DARK_GRAY)
+
+            self.screen.blit(title,  (self._center_x(title),  160))
+            self.screen.blit(score,  (self._center_x(score),  265))
+            self.screen.blit(rounds, (self._center_x(rounds), 300))
+            self.screen.blit(hint,   (self._center_x(hint),   460))
+
+            for btn in buttons:
+                hovered = btn["rect"].collidepoint(mx, my)
+                color = tuple(min(c + 50, 255) for c in btn["color"]) if hovered else btn["color"]
+                pygame.draw.rect(self.screen, color, btn["rect"], border_radius=8)
+                if hovered:
+                    pygame.draw.rect(self.screen, WHITE, btn["rect"], width=2, border_radius=8)
+                lbl = self.fonts["normal"].render(btn["label"], True, WHITE)
+                self.screen.blit(lbl, (btn["rect"].centerx - lbl.get_width() // 2,
+                                       btn["rect"].centery - lbl.get_height() // 2))
+
+            pygame.display.flip()
+            clock.tick(fps)
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    raise SystemExit
+
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    for btn in buttons:
+                        if btn["rect"].collidepoint(event.pos):
+                            if btn["action"] == "restart":
+                                return True
+                            elif btn["action"] == "quit":
+                                pygame.quit()
+                                raise SystemExit
+                            elif btn["action"] == "stats":
+                                self.stats_screen(clock, fps)
+
+                if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_q:
                         pygame.quit()
                         raise SystemExit
                     if event.key == pygame.K_r:
                         return True
+                    if event.key == pygame.K_s:
+                        self.stats_screen(clock, fps)

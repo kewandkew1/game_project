@@ -30,11 +30,12 @@ class GameManager:
         self.round_num += 1
         r = random.choice(self.residents)
 
-        if random.random() < 0.5:
-            self.current_visitor = copy.deepcopy(r)
-        else:
+        fake_chance = {1: 0.40, 2: 0.50, 3: 0.65}
+        if random.random() < fake_chance.get(self.difficulty, 0.50):
             error = self._pick_error_type()
             self.current_visitor = Doppelganger(r, error)
+        else:
+            self.current_visitor = copy.deepcopy(r)
 
         self.round_start_time = time.time()
         return self.current_visitor
@@ -45,7 +46,10 @@ class GameManager:
         elif self.difficulty == 2:
             return random.choice(["room_mismatch", "wrong_id"])
         else:
-            return random.choice(["room_mismatch", "name_typo"])
+            return random.choices(
+                ["name_typo", "room_mismatch", "wrong_id", "photo_swap"],
+                weights=[45, 30, 20, 5],
+            )[0]
 
     def check_decision(self, player_choice):
         is_real = self.current_visitor.get_result()

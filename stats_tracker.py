@@ -21,9 +21,10 @@ class StatsTracker:
         try:
             with open(self.filename, "r", newline="") as f:
                 reader = csv.DictReader(f)
-                sessions = {row["session_id"]
-                            for row in reader if row.get("session_id")}
-            return f"S{len(sessions) + 1:03d}"
+                nums = [int(row["session_id"][1:]) for row in reader
+                        if row.get("session_id", "").startswith("S")
+                        and row["session_id"][1:].isdigit()]
+            return f"S{(max(nums) + 1 if nums else 1):03d}"
         except Exception:
             return "S001"
 
@@ -39,6 +40,14 @@ class StatsTracker:
         self.session_data.append(row)
 
     def save_to_csv(self):
+        # Ensure file ends with a newline so appended rows aren't merged with the last row
+        if os.path.exists(self.filename) and os.path.getsize(self.filename) > 0:
+            with open(self.filename, "rb") as f:
+                f.seek(-1, 2)
+                if f.read(1) not in (b"\n", b"\r"):
+                    with open(self.filename, "a") as f2:
+                        f2.write("\n")
+
         with open(self.filename, "a", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=[
                 "session_id", "round_number", "decision_time",
