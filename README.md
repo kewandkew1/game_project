@@ -14,8 +14,8 @@ Key features include multiple doppelganger error types (wrong room, name typo, p
 
 To clone this project:
 ```sh
-git clone https://github.com/kewandkew1/game_project
-cd who-is-your-neighbor
+git clone https://github.com/kewandkew1/game_project.git
+cd game_project
 ```
 
 To create and run a Python environment for this project:
