@@ -10,8 +10,6 @@ CSV_FILE   = "gameplay_stats.csv"
 OUTPUT_DIR = "graphs"
 
 
-# ── data ──────────────────────────────────────────────────────────────────────
-
 def load_data():
     if not os.path.exists(CSV_FILE):
         return None, f"'{CSV_FILE}' not found. Play the game first to generate data."
@@ -20,8 +18,6 @@ def load_data():
         return None, "CSV file is empty."
     return df, None
 
-
-# ── graph builders (return Figure) ────────────────────────────────────────────
 
 def graph_decision_time_histogram(df):
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -127,8 +123,6 @@ def build_summary_text(df):
     return "\n".join(lines)
 
 
-# ── save helpers (kept for CLI / export button) ────────────────────────────────
-
 def save_all(df):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     fns = {
@@ -143,8 +137,6 @@ def save_all(df):
         plt.close(fig)
     return OUTPUT_DIR
 
-
-# ── tkinter app ───────────────────────────────────────────────────────────────
 
 GRAPHS = [
     ("Decision Time Histogram",       graph_decision_time_histogram),
@@ -176,10 +168,7 @@ class GraphViewer(tk.Tk):
         self._build_ui()
         self._show_graph(0)
 
-    # ── layout ────────────────────────────────────────────────────────────────
-
     def _build_ui(self):
-        # sidebar
         sidebar = tk.Frame(self, bg=SIDEBAR, width=210)
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
         sidebar.pack_propagate(False)
@@ -223,7 +212,6 @@ class GraphViewer(tk.Tk):
             command=self._save_all,
         ).pack(fill=tk.X, padx=6, pady=3)
 
-        # main canvas area
         self.canvas_frame = tk.Frame(self, bg=BG)
         self.canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -236,13 +224,10 @@ class GraphViewer(tk.Tk):
         self.plot_frame = tk.Frame(self.canvas_frame, bg=BG)
         self.plot_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
-    # ── actions ───────────────────────────────────────────────────────────────
-
     def _show_graph(self, idx):
         label, builder = GRAPHS[idx]
         self.title_label.config(text=label)
 
-        # highlight selected button
         for i, btn in enumerate(self.buttons):
             btn.config(bg=ACCENT if i == idx else SIDEBAR,
                        fg=BTN_FG if i == idx else TEXT_FG)
@@ -283,8 +268,6 @@ class GraphViewer(tk.Tk):
             plt.close(self.current_fig)
         super().destroy()
 
-
-# ── entry point ───────────────────────────────────────────────────────────────
 
 def open_stats_viewer():
     df, err = load_data()

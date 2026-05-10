@@ -40,7 +40,6 @@ class StatsTracker:
         self.session_data.append(row)
 
     def save_to_csv(self):
-        # Ensure file ends with a newline so appended rows aren't merged with the last row
         if os.path.exists(self.filename) and os.path.getsize(self.filename) > 0:
             with open(self.filename, "rb") as f:
                 f.seek(-1, 2)

@@ -272,7 +272,7 @@ class UIManager:
                     elif event.key == pygame.K_RIGHT:
                         selected = (selected + 1) % len(options)
                     elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                        return selected + 1          # 1 / 2 / 3
+                        return selected + 1
                     elif event.key == pygame.K_q:
                         pygame.quit()
                         raise SystemExit

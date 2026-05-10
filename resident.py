@@ -84,7 +84,7 @@ class Doppelganger(Resident):
         self.original_data = resident.to_dict()
         self.error_type = error_type or random.choice(self.ERROR_TYPES)
         self.disguise_level = 1
-        self.display_photo = self.photo_id  # reset; only photo_swap changes this
+        self.display_photo = self.photo_id
 
         self.generate_error()
 
